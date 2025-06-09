@@ -9,7 +9,7 @@ import PIL.Image
 import hydra
 import random
 import numpy as np
-
+from tqdm import tqdm
 from ragen.env import REGISTERED_ENVS, REGISTERED_ENV_CONFIGS
 from ragen.utils import register_resolvers
 register_resolvers()
@@ -56,16 +56,32 @@ class EnvStateManager:
     def _init_env_instances(self, config):
         env_list = []
         done_groups = 0
+        
         for tag, n_group in zip(config.env_configs.tags, config.env_configs.n_groups):
-            for env_id in range(done_groups * self.group_size, (done_groups + n_group) * self.group_size):
-                cfg_template = self.sys_config.custom_envs[tag]
-                env_class = cfg_template.env_type
+            cfg_template = self.sys_config.custom_envs[tag]
+            env_class = cfg_template.env_type
+            # Pre-load Alfworld game files if needed
+            if 'Alfworld' == tag:
+                from ragen.env.alfworld_old.env import get_all_alfworld_game_files
+                sample_config = REGISTERED_ENV_CONFIGS[env_class]()
+                alfworld_game_files = get_all_alfworld_game_files(sample_config.config_file)
+                print(f"Loaded {len(alfworld_game_files)} Alfworld game files for distribution")
+            
+            for env_id in tqdm(range(done_groups * self.group_size, (done_groups + n_group) * self.group_size), desc=f"Initializing {tag} environments"):
                 max_actions_per_traj = cfg_template.max_actions_per_traj
                 if cfg_template.env_config is None:
                     env_config = REGISTERED_ENV_CONFIGS[env_class]()
                 else:
                     env_config = REGISTERED_ENV_CONFIGS[env_class](**cfg_template.env_config)
+                
                 env_obj = REGISTERED_ENVS[env_class](env_config)
+                
+                # Assign specific game file to Alfworld environments
+                if env_class == 'alfworld_old' and alfworld_game_files:
+                    # Use env_id as index for diversity, with modulo to handle overflow
+                    game_file_index = env_id % len(alfworld_game_files)
+                    env_obj.assign_game_file(alfworld_game_files[game_file_index])
+                
                 entry = {'tag': tag, 'group_id': env_id // self.group_size, 'env_id': env_id, 
                         'env': env_obj, 'config': env_config, 'status': EnvStatus(), 'max_actions_per_traj': max_actions_per_traj}
                 env_list.append(entry)
@@ -90,7 +106,8 @@ class EnvStateManager:
         else:
             seed = 123
         seeds = _expand_seed(seed)
-        for seed, entry in zip(seeds, envs):
+
+        for seed, entry in tqdm(zip(seeds, envs), desc="Resetting environments", total=len(envs)):
             entry['env'].reset(seed=seed, mode=self.mode)
             entry['status'] = EnvStatus(seed=seed)
 

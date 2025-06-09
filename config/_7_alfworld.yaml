@@ -1,0 +1,26 @@
+defaults:
+  - base
+
+trainer:
+  experiment_name: alfworld-main
+
+# Alfworld requires larger context and longer episodes
+actor_rollout_ref:
+  rollout:
+    max_model_len: 8000
+    response_length: 800
+    max_num_batched_tokens: 8000
+
+# Alfworld typically needs more turns to complete tasks
+agent_proxy:
+  max_turn: 17
+  max_actions_per_turn: 1
+
+# Environment specific configuration
+es_manager:
+  train:
+    env_configs:
+      tags: ["Alfworld"]
+  val:
+    env_configs:
+      tags: ["Alfworld"]

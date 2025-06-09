@@ -48,10 +48,12 @@ custom_envs:
       max_steps: 100
       render_mode: "rgb_array"
 
-  # Alfworld:
-  #   env_type: alfworld
-  #   env_instruction: "You are solving the Alfworld puzzle. "
-  #   env_config: null
+  Alfworld:
+    env_type: alfworld_old
+    max_actions_per_traj: 17
+    env_instruction: "Interact with a household to solve a task. Imagine you are an intelligent agent in a household environment and your target is to perform actions to complete the task goal. At the beginning of your interactions, you will be given the detailed description of the current environment and your goal to accomplish. \nFor each of your turn, you will be given the observation of the last turn. You should first think about the current condition and plan for your future actions, and then output your action in this turn. Your output must strictly follow this format: \"Thought: your thoughts. \nAction: your next action\".\n\nThe available actions are:\n1. go to {recep}\n2. task {obj} from {recep}\n3. move {obj} to {recep}\n4. open {recep}\n5. close {recep}\n6. toggle {obj} {recep}\n7. clean {obj} with {recep}\n8. heat {obj} with {recep}\n9. cool {obj} with {recep}\nwhere {obj} and {recep} correspond to objects and receptacles.\nAfter your each turn, the environment will give you immediate feedback based on which you plan your next few steps. if the environment output \"Nothing happened\", that means the previous action is invalid and you should try more options. Example answer format: <think>I need to place a toilet paper roll on the toilet paper hanger. First, I should check if there's already a roll on the hanger or if it's empty.</think><answer>go to toiletpaperhanger 1</answer>"
+    max_tokens: 200
+    env_config: null
 
   Countdown:
     env_type: countdown
