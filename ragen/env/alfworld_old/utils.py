@@ -3,6 +3,7 @@ import os
 import yaml
 import re
 from typing import List, Any
+import tempfile
 
 def load_config(config_file: str, params: List[str] = []):
     assert os.path.exists(config_file), f"Invalid config file: {config_file}"
@@ -51,3 +52,15 @@ def check_format(action: str, templates: Any) -> bool:
 
 def check_correctness(action: str, target: str) -> bool:
     ...
+
+
+def handle_temp_dir():
+    # check exists and have write permission
+    if os.path.exists('/scratch') and os.access('/scratch', os.W_OK):
+        os.makedirs('/scratch/zengyif/tmp', exist_ok=True)
+        tempfile.tempdir = '/scratch/zengyif/tmp'
+    elif os.path.exists('/raid') and os.access('/raid', os.W_OK):
+        os.makedirs('/raid/zengyif/tmp', exist_ok=True)
+        tempfile.tempdir = '/raid/zengyif/tmp'
+    else:
+        print("Warning: No scratch or raid directory found. Using default temp directory")

@@ -15,6 +15,9 @@ from ragen.utils import register_resolvers
 register_resolvers()
 import sys
 
+from ragen.env.alfworld_old.utils import handle_temp_dir
+handle_temp_dir()
+
 class DummyRewardManager():
     """The reward manager.
     """

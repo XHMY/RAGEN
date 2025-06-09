@@ -13,6 +13,8 @@ from tqdm import tqdm
 from ragen.env import REGISTERED_ENVS, REGISTERED_ENV_CONFIGS
 from ragen.utils import register_resolvers
 register_resolvers()
+from ragen.env.alfworld_old.utils import handle_temp_dir
+handle_temp_dir()
 
 @dataclass
 class EnvStatus:
@@ -150,6 +152,7 @@ class EnvStateManager:
             status.rewards.append(acc_reward) # NOTE use turn-wise acc_reward
             actions_left = max_actions_per_traj - status.num_actions
             if turn_done:
+                # breakpoint()
                 status.terminated = True # TODO check terminated definition in gymnasium
                 status.truncated = not turn_info.get('success', False)
             history = self._update_cache_history(history, next_state=obs, actions_left=actions_left, num_actions_info={
@@ -193,6 +196,7 @@ class EnvStateManager:
         rollout_cache = self.rollout_cache
         TURN_LVL_METRICS = ['action_is_effective', 'action_is_valid', 'end_of_page']
 
+        # breakpoint()
         # add metrics to rollout cache
         for entry, cache in zip(envs, rollout_cache):
             status = entry['status']
