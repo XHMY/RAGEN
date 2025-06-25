@@ -1,5 +1,7 @@
 from .ctx_manager import ContextManager
 from .es_manager import EnvStateManager
+from .parallel_rollout import ParallelRolloutManager
+from .simple_parallel_rollout import SimpleParallelRolloutManager
 from vllm import LLM, SamplingParams
 from verl.single_controller.ray.base import RayWorkerGroup
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -124,6 +126,31 @@ class LLMAgentProxy:
 		self.val_es_manager = EnvStateManager(config, mode="val")
 		self.actor_wg = actor_rollout_wg
 		self.tokenizer = tokenizer
+		
+		# Initialize parallel rollout manager if enabled
+		self.use_parallel_rollout = getattr(config.agent_proxy, 'use_parallel_rollout', False)
+		self.parallel_n_jobs = getattr(config.agent_proxy, 'parallel_n_jobs', -1)
+		self.use_simple_parallel = getattr(config.agent_proxy, 'use_simple_parallel', True)  # Use simple version by default
+		
+		if self.use_parallel_rollout:
+			if self.use_simple_parallel:
+				self.parallel_rollout_manager = SimpleParallelRolloutManager(
+					config=config, 
+					tokenizer=tokenizer, 
+					n_jobs=self.parallel_n_jobs if self.parallel_n_jobs > 0 else 4
+				)
+				print(f"Simple parallel rollout enabled with {self.parallel_rollout_manager.n_jobs} workers")
+			else:
+				self.parallel_rollout_manager = ParallelRolloutManager(
+					config=config, 
+					actor_rollout_wg=actor_rollout_wg, 
+					tokenizer=tokenizer, 
+					n_jobs=self.parallel_n_jobs
+				)
+				print(f"Full parallel rollout enabled with {self.parallel_rollout_manager.n_jobs} workers")
+		else:
+			self.parallel_rollout_manager = None
+			print("Using sequential rollout")
 
 	def generate_sequences(self, lm_inputs: DataProto):
 		# TODO: add kv cache both for the vllm wrapper here and for verl vllm.
@@ -141,6 +168,18 @@ class LLMAgentProxy:
 		return lm_outputs
 
 	def rollout(self, dataproto: DataProto, val=False):
+		"""
+		Execute rollout using either parallel or sequential approach based on configuration.
+		"""
+		if self.use_parallel_rollout:
+			# Use parallel rollout manager
+			return self.parallel_rollout_manager.parallel_rollout(dataproto, val=val)
+		else:
+			# Use original sequential rollout
+			return self._sequential_rollout(dataproto, val=val)
+	
+	def _sequential_rollout(self, dataproto: DataProto, val=False):
+		"""Original sequential rollout implementation"""
 		es_manager = self.val_es_manager if val else self.train_es_manager
 		ctx_manager = self.val_ctx_manager if val else self.train_ctx_manager
 		env_outputs = es_manager.reset()
