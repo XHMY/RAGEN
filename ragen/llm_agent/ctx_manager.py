@@ -240,6 +240,11 @@ class ContextManager:
         for env_output in env_outputs:
             if 'state' in env_output['history'][-1] and prepare_for_update:
                 env_output['history'] = env_output['history'][:-1] # when prepare for update, we do not add the state from the n+1 turn to the trajectory
+            
+            max_k = getattr(self.config.agent_proxy, "max_context_window", None)
+            if max_k is not None and isinstance(max_k, int) and max_k > 0:
+                env_output['history'] = env_output['history'][-max_k:]
+            
             messages = [
                 {"role": "system", "content": f"You're a helpful assistant. "}, 
                 {"role": "user", "content": self.prefix_lookup[env_output["env_id"]]}
@@ -274,7 +279,7 @@ class ContextManager:
         input_ids, attention_mask = inputs.input_ids, inputs.attention_mask
         position_ids = attention_mask.cumsum(dim=-1)
         if prepare_for_update:
-            scores = [[i['reward'] for i in env_output['history']] for env_output in env_outputs]
+            scores = [[i.get('reward', 0.0) for i in env_output['history']] for env_output in env_outputs]
             score_tensor, loss_mask, response_mask = get_masks_and_scores(input_ids, self.tokenizer, scores, use_turn_scores=self.config.agent_proxy.use_turn_scores, enable_response_mask=self.config.enable_response_mask)
 
             normalized_score_tensor = score_tensor

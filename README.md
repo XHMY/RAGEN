@@ -227,7 +227,8 @@ RAGEN provides a easy way to evaluate a model:
 ```bash
 python -m ragen.llm_agent.agent_proxy --config-name <eval_config>
 ```
-You only need to set model and environment to evaluate in `config/<eval_config>.yaml`.
+You only need to set model and environment to evaluate in `config/<eval_config>.yaml`.  
+To limit how many previous turns the model sees during evaluation, you can set `agent_proxy.max_context_window` in your config file.
 
 
 <!--
@@ -261,6 +262,7 @@ We implement RAGEN as a modular system: there are three main modules: **Environm
 - Context Manager (**ctx_manager**):
   - Parses raw agent tokens into structured actions for the **es_manager**
   - Formats observation from **es_manager**, parses and formulates them for following rollout of agent.
+  - Supports a `max_context_window` hyperparameter, which limits how many previous turns of interaction history are retained in the model’s input. 
   - Gathers final rollout trajectories and compiles them into tokens, attention masks, reward scores, and loss masks for llm updating.
 - Agent Proxy (**agent_proxy**): Serves as the interface for executing single or multi-round rollouts
 

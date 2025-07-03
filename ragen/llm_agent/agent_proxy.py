@@ -11,7 +11,7 @@ import os
 from typing import List, Dict
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from .base_llm import ConcurrentLLM
-import time
+# import time
 
 
 class VllmWrapperWg: # Thi is a developing class for eval and test
@@ -28,7 +28,7 @@ class VllmWrapperWg: # Thi is a developing class for eval and test
             enforce_eager=ro_config.enforce_eager,
             gpu_memory_utilization=ro_config.gpu_memory_utilization,
             disable_custom_all_reduce=True,
-            disable_mm_preprocessor_cache=True,
+            # disable_mm_preprocessor_cache=True,
             skip_tokenizer_init=False,
             max_model_len=ro_config.max_model_len,
             disable_log_stats=ro_config.disable_log_stats,

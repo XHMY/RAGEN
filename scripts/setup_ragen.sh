@@ -52,18 +52,13 @@ main() {
     # Need to source conda for script environment
     eval "$(conda shell.bash hook)"
     conda activate ragen
-    
-    # Clone repository
-    # print_step "Cloning ragen repository..."
-    # git clone git@github.com:ZihanWang314/ragen.git
-    # cd ragen
 
     # Install package in editable mode
     print_step "setting up verl..."
     git submodule init
     git submodule update
     cd verl
-    pip install -e . --no-dependencies # we put dependencies in RAGEN/requirements.txt
+    pip install -e . --no-dependencies # we put dependencies in requirements.txt
     cd ..
     
     # Install package in editable mode
@@ -99,7 +94,7 @@ main() {
         pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
         
         print_step "Installing flash-attention..."
-        pip3 install flash-attn --no-build-isolation
+        pip3 install flash-attn==2.7.4.post1 --no-build-isolation
     else
         print_step "Installing PyTorch without CUDA support..."
         pip install torch==2.6.0
@@ -107,7 +102,6 @@ main() {
     
     # Install remaining requirements
     print_step "Installing additional requirements..."
-    pip install flashinfer-python -i https://flashinfer.ai/whl/cu126/torch2.6
     pip install -r requirements.txt
 
     print_step "Downloading data..."
