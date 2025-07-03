@@ -1,5 +1,6 @@
 defaults:
   - base
+  - vllm_server  # Use new independent rollout configuration
 
 trainer:
   experiment_name: alfworld-main
@@ -10,6 +11,8 @@ actor_rollout_ref:
     max_model_len: 8000
     response_length: 800
     max_num_batched_tokens: 8000
+    tensor_model_parallel_size: 2  # Reduce to 2 for stability
+    gpu_memory_utilization: 0.6   # Reduce memory usage
 
 # Alfworld typically needs more turns to complete tasks
 agent_proxy:
@@ -19,8 +22,29 @@ agent_proxy:
 # Environment specific configuration
 es_manager:
   train:
+    env_groups: 16
     env_configs:
       tags: ["Alfworld"]
+      n_groups: [16]  # Inherit from base config
   val:
     env_configs:
       tags: ["Alfworld"]
+      n_groups: [256]  # Inherit from base config
+
+# Independent rollout configuration optimized for Alfworld
+ray_rollout:
+  use_ray: true
+  rollout_mode: independent  # Use VLLM server + independent workers
+  num_env_workers: 64  # More workers for slow Alfworld environments
+  
+  ray_init_config:
+    num_cpus: 32  # More CPUs for Alfworld processing
+    num_gpus: 2   # GPUs for VLLM server
+    
+  env_worker:
+    max_envs_per_worker: 1  # Fewer envs per worker due to Alfworld complexity
+    num_cpus_per_worker: 1  # More CPU per worker for Alfworld processing
+    
+  performance:
+    observation_batch_size: 16  # Smaller batches for complex observations
+    ray_timeout: 900  # Longer timeout for slow Alfworld environments

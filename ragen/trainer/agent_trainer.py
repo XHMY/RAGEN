@@ -54,6 +54,7 @@ import torch
 from verl.utils.torch_functional import masked_mean
 
 from ragen.llm_agent.agent_proxy import LLMAgentProxy
+from ragen.llm_agent.parallel_agent_proxy import create_parallel_agent_proxy
 from ragen.utils import GenerationsLogger
 
 
@@ -180,12 +181,42 @@ class RayAgentTrainer(VerlRayPPOTrainer):
         # self.train_seeds = [seed for seed in range(0, self.config.trainer.total_training_steps * 1000, 1000)]
         # self.val_seeds = [seed for seed in range(val_start, val_start + self.config.trainer.validation_steps)]
 
+    def _using_parallel_rollouts(self):
+        """Check if we're using parallel rollouts that don't need VLLM workers."""
+        return (hasattr(self.config, 'ray_rollout') and 
+                self.config.ray_rollout.get('use_ray', False) and
+                self.config.ray_rollout.get('rollout_mode', 'sequential') == 'independent')
+    
+    def init_workers(self):
+        """Override to skip VLLM worker creation when using parallel rollouts."""
+        if self._using_parallel_rollouts():
+            print("🚀 Skipping VLLM worker creation for independent parallel rollouts (API-only mode)")
+            # Set dummy worker group to satisfy parent class expectations
+            self.actor_rollout_wg = None
+            self.critic_wg = None
+            self.ref_policy_wg = None
+            return
+        else:
+            print("📦 Creating VLLM workers for sequential rollouts")
+            super().init_workers()
+
     def init_agent_proxy(self):
-        self.agent_proxy = LLMAgentProxy(
-            config=self.config,
-            actor_rollout_wg=self.actor_rollout_wg,
-            tokenizer=self.tokenizer
-        )
+        # Use parallel agent proxy if ray_rollout is configured, fallback to sequential
+        if self._using_parallel_rollouts():
+            # For parallel rollout, let the factory function auto-detect the appropriate configuration
+            self.agent_proxy = create_parallel_agent_proxy(
+                config=self.config,
+                tokenizer=self.tokenizer,
+                use_ray=True
+            )
+            print(f"✅ Initialized parallel agent proxy with independent rollout (API-only)")
+        else:
+            self.agent_proxy = LLMAgentProxy(
+                config=self.config,
+                actor_rollout_wg=self.actor_rollout_wg,
+                tokenizer=self.tokenizer
+            )
+            print(f"✅ Initialized sequential agent proxy")
     def _maybe_log_generations(self, inputs, outputs, scores, _type="val"):
         """Log a table of validation samples to the configured logger (wandb or swanlab)"""
 
